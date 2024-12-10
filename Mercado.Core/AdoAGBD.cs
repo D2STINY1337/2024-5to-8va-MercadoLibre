@@ -1,127 +1,90 @@
+using et12.edu.ar.AGBD.Mapeadores;
 using Mercado.Core.Ado;
+using MySql.Data.MySqlClient;
 
 namespace Mercado.Core;
 
 public class AdoAGBD : IAdo
 {
-    public void AltaCompra(Compra compra)
+    public MapCompra(AdoAGBD ado):base(ado)
     {
-        using var connection = new SqlConnection(_MercadoLibre);
-        using var command = new SqlCommand("INSERT INTO Compra (FechaHora, cantidad, precio, idComprador, idProducto) VALUES (@fechaHora, @cantidad, @precio, @idComprador, @idProducto)", connection);
-        command.Parameters.AddWithValue("@fechaHora", compra.FechaHora);
-        command.Parameters.AddWithValue("@cantidad", compra.Cantidad);
-        command.Parameters.AddWithValue("@precio", compra.Precio);
-        command.Parameters.AddWithValue("@idComprador", compra.IdComprador);
-        command.Parameters.AddWithValue("@idProducto", compra.IdProducto);
+        Tabla = "Compra";
+    }
 
-        connection.Open();
-        command.ExecuteNonQuery();
+    public override Compra ObjetoDesdeFila(DataRow fila)
+        => new Compra
+        {
+            IdComprador = Convert.ToInt16(fila["idComprador"]),
+            IdProducto = Convert.ToUInt16(fila["idProducto"]),
+            FechaHora = Convert.ToDateTime(fila["FechaHora"]),
+            Cantidad = Convert.ToUInt16(fila["cantidad"]),
+            Precio = Convert.ToDecimal(fila["precio"])
+        };
+
+    public void AltaCompra(Compra compra)
+        => EjecutarComandoCon("altaCompra", ConfigurarAltaCompra, PostAltaCompra, compra);
+
+    public void ConfigurarAltaCompra(Compra compra)
+    {
+        SetComandoSP("altaCompra");
+
+        BP.CrearParametro("unaFechaHora")
+          .SetTipoDateTime()
+          .SetValor(compra.FechaHora)
+          .AgregarParametro();
+
+        BP.CrearParametro("unacantidad")
+          .SetTipo(MySql.Data.MySqlClient.MySqlDbType.UInt16)
+          .SetValor(compra.Cantidad)
+          .AgregarParametro();
+
+        BP.CrearParametro("unprecio")
+          .SetTipoDecimal()
+          .SetValor(compra.Precio)
+          .AgregarParametro();
+
+        BP.CrearParametro("unidComprador")
+          .SetTipo(MySql.Data.MySqlClient.MySqlDbType.Int16)
+          .SetValor(compra.IdComprador)
+          .AgregarParametro();
+
+        BP.CrearParametro("unidProducto")
+          .SetTipo(MySql.Data.MySqlClient.MySqlDbType.UInt16)
+          .SetValor(compra.IdProducto)
+          .AgregarParametro();
+    }
+
+    public void PostAltaCompra(Compra compra)
+    {
+        var paramIdComprador = GetParametro("unIdComprador");
+        Comprador.ID = Convert.ToInt16(paramIdComprador.Value);
+    }
+
+       public List<Compra> ObtenerCompras() => ColeccionDesdeTabla();   
     }
 
     public void AltaProducto(Producto producto)
     {
-        using var connection = new SqlConnection(_MercadoLibre);
-        using var command = new SqlCommand("INSERT INTO Producto (idProducto, precio, cantidad, nombre, idVendedor, fecha) VALUES (@idProducto, @precio, @cantidad, @nombre, @idVendedor, @fecha)", connection);
-        command.Parameters.AddWithValue("@idProducto", producto.IdProducto);
-        command.Parameters.AddWithValue("@precio", producto.Precio);
-        command.Parameters.AddWithValue("@cantidad", producto.Cantidad);
-        command.Parameters.AddWithValue("@nombre", producto.Nombre);
-        command.Parameters.AddWithValue("@idVendedor", producto.IdVendedor);
-        command.Parameters.AddWithValue("@fecha", producto.Fecha);
 
-        connection.Open();
-        command.ExecuteNonQuery();
     }
 
     public void AltaUsuario(Usuario usuario)
     {
-        using var connection = new SqlConnection(_MercadoLibre);
-        using var command = new SqlCommand("INSERT INTO Usuario (idUsuario, nombre, apellido, telefono, email, pass) VALUES (@idUsuario, @nombre, @apellido, @telefono, @email, @pass)", connection);
 
-        command.Parameters.AddWithValue("@idUsuario", usuario.IdUsuario);
-        command.Parameters.AddWithValue("@nombre", usuario.Nombre);
-        command.Parameters.AddWithValue("@apellido", usuario.Apellido);
-        command.Parameters.AddWithValue("@telefono", usuario.Telefono);
-        command.Parameters.AddWithValue("@email", usuario.Email);
-        command.Parameters.AddWithValue("@pass", usuario.Pass);
-
-        connection.Open();
-        command.ExecuteNonQuery();
     }
 
     public List<Compra> ObtenerCompras()
     {
-        var compras = new List<Compra>();
 
-            using var connection = new SqlConnection(_MercadoLibre);
-            using var command = new SqlCommand("SELECT * FROM Compra", connection);
-
-            connection.Open();
-            using var reader = command.ExecuteReader();
-
-            while (reader.Read())
-            {
-                compras.Add(new Compra
-                {
-                    FechaHora = reader.GetDateTime("FechaHora"),
-                    Cantidad = reader.GetUInt16("cantidad"),
-                    Precio = reader.GetDecimal("precio"),
-                    IdComprador = reader.GetInt16("idComprador"),
-                    IdProducto = reader.GetUInt16("idProducto")
-            });
-
-            return compras;
     }
 
     public List<Producto> ObtenerProductos()
     {
-       var productos = new List<Producto>();
 
-            using var connection = new SqlConnection(_MercadoLibre);
-            using var command = new SqlCommand("SELECT * FROM Producto", connection);
-
-            connection.Open();
-            using var reader = command.ExecuteReader();
-
-            while (reader.Read())
-            {
-                productos.Add(new Producto
-                {
-                    IdProducto = reader.GetInt16("idProducto"),
-                    Precio = reader.GetDecimal("precio"),
-                    Cantidad = reader.GetUInt16("cantidad"),
-                    Nombre = reader.GetString("nombre"),
-                    IdVendedor = reader.GetInt16("idVendedor"),
-                    Fecha = reader.GetDateTime("fecha")
-                });
-             }
-
-             return productos;
     }
 
     public List<Usuario> ObtenerUsuarios()
     {
-        var usuarios = new List<Usuario>();
-
-            using var connection = new SqlConnection(_MercadoLibre);
-            using var command = new SqlCommand("SELECT * FROM Usuario", connection);
-
-            connection.Open();
-            using var reader = command.ExecuteReader();
-
-            while (reader.Read())
-            {
-                usuarios.Add(new Usuario
-                {
-                    IdUsuario = reader.GetInt16("idUsuario"),
-                    Nombre = reader.GetString("nombre"),
-                    Apellido = reader.GetString("apellido"),
-                    Telefono = reader.GetInt32("telefono"),
-                    Email = reader.GetString("email"),
-                    Pass = reader.GetString("pass")
-                });
-            }
-
-            return usuarios;
-    }
+        
+        }
 }
